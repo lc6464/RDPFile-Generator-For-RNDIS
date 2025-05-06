@@ -22,7 +22,7 @@ var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
 List<IPAddress> addresses = [];
 
 // 展示所有可用的网络接口和 IPv4 默认网关地址
-Console.WriteLine($"找到以下网络接口和 IPv4 默认网关地址，请根据地址前的序号选择：");
+Console.WriteLine("找到以下网络接口和 IPv4 默认网关地址，请根据地址前的序号选择：");
 
 foreach (var ni in networkInterfaces) {
 	Console.WriteLine($"\n{ni.Name} ({ni.Description}) 本机 IPv4 地址：" +
