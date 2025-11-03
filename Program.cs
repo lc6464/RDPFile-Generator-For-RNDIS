@@ -139,7 +139,7 @@ try {
 
 		Console.WriteLine("输出文件创建完成，文件名为 output.rdp，请尽情使用。");
 
-		if (isManualMode) {
+		if (isManualMode && OperatingSystem.IsWindows()) {
 			Console.Write("按 y 自动启动远程桌面连接，按其他任意键退出程序：");
 			var key = Console.ReadKey();
 			Console.WriteLine();
@@ -147,7 +147,7 @@ try {
 				try {
 					// 启动远程桌面连接
 					using var process = new System.Diagnostics.Process();
-					process.StartInfo.FileName = "mstsc.exe";
+					process.StartInfo.FileName = Path.Join(Environment.SystemDirectory, "mstsc.exe");
 					process.StartInfo.Arguments = Tools.OutputFileInfo.FullName;
 					process.Start();
 					Console.WriteLine("远程桌面连接已启动，祝你使用愉快！");
