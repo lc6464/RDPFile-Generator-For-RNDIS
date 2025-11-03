@@ -5,7 +5,13 @@ if (!Tools.TemplateFileInfo.Exists) {
 	return;
 }
 
-if (Tools.OutputFileInfo.Exists) {
+var isManualMode = args is ["manual"];
+
+if (isManualMode) {
+	Console.WriteLine("手动模式已启用。\n");
+}
+
+if (!isManualMode && Tools.OutputFileInfo.Exists) {
 	Console.WriteLine("检测到输出文件 output.rdp 已存在，为避免错误覆盖，请自行移动或删除输出文件。");
 	return;
 }
@@ -41,21 +47,49 @@ if (addresses.Count == 0) {
 }
 
 var index = -1;
+IPAddress? address = null;
 
-if (addresses.Count == 1) {
+if (!isManualMode && addresses.Count == 1) {
 	index = 0;
 	Console.WriteLine($"\n检测到有且仅有一个 IPv4 默认网关地址 ({addresses[index]})，将自动选择该地址。");
 } else {
 	// 选择默认网关
-	Console.Write("\n请输入你需要选择的默认网关序号：");
+	Console.Write("\n请输入你需要选择的默认网关序号或直接输入任意完整 IPv4 地址：");
 
-	while (!int.TryParse(Console.ReadLine(), out index) || index < 0 || index >= addresses.Count) {
+	while (true) {
+		var input = Console.ReadLine();
+		// 尝试解析为索引
+		if (int.TryParse(input, out var parsedIndex) && parsedIndex >= 0 && parsedIndex < addresses.Count) {
+			index = parsedIndex;
+			break;
+		}
+		// 尝试解析为 IP 地址
+		if (IPAddress.TryParse(input, out var parsedAddress) && parsedAddress.AddressFamily == AddressFamily.InterNetwork) {
+			address = parsedAddress;
+			break;
+		}
 		Console.Write("输入错误，请重新输入：");
 	}
 }
 
-var address = addresses[index];
+address ??= addresses[index];
 Console.WriteLine($"你已成功选择 [{index}] {address}\n");
+
+var port = 3389;
+
+if (isManualMode) {
+	// 修改端口号
+	Console.Write("请输入远程桌面连接端口号（直接回车使用默认值 3389）：");
+	var portInput = Console.ReadLine();
+	if (string.IsNullOrWhiteSpace(portInput)) {
+		// 使用默认端口号
+	} else if (int.TryParse(portInput, out port) && port > 0 && port <= 65535) {
+		Console.WriteLine($"已成功设置端口号为 {port}\n");
+	} else {
+		port = 3389;
+		Console.WriteLine("输入无效，已使用默认端口号 3389\n");
+	}
+}
 
 // 主动检查默认网关地址是否异常
 if (address.ToString() is not { Length: >= 7 }) {
@@ -76,7 +110,7 @@ try {
 		string? line = null;
 		while ((line = template.ReadLine()) is not null) {
 			// 尝试替换默认网关地址并写入输出文件
-			tempOutput.WriteLine(line.Replace("${DefaultGateway}", address.ToString()));
+			tempOutput.WriteLine(line.Replace("${DefaultGateway}", port == 3389 ? address.ToString() : string.Concat(address, ":", port)));
 		}
 
 	} catch (Exception e) {
@@ -104,6 +138,24 @@ try {
 		Tools.OutputTempFileInfo.CopyTo(Tools.OutputFileInfo.FullName, true);
 
 		Console.WriteLine("输出文件创建完成，文件名为 output.rdp，请尽情使用。");
+
+		if (isManualMode) {
+			Console.Write("按 y 自动启动远程桌面连接，按其他任意键退出程序：");
+			var key = Console.ReadKey();
+			Console.WriteLine();
+			if (key.KeyChar == 'y' || key.KeyChar == 'Y') {
+				try {
+					// 启动远程桌面连接
+					using var process = new System.Diagnostics.Process();
+					process.StartInfo.FileName = "mstsc.exe";
+					process.StartInfo.Arguments = Tools.OutputFileInfo.FullName;
+					process.Start();
+					Console.WriteLine("远程桌面连接已启动，祝你使用愉快！");
+				} catch (Exception e) {
+					Console.WriteLine($"远程桌面连接启动失败，异常信息：{e.Message}");
+				}
+			}
+		}
 	} catch (Exception e) {
 		Console.WriteLine($"复制输出文件失败，异常信息：{e.Message}");
 	} finally {

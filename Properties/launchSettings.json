@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "RDPFileGeneratorForRNDIS": {
+      "commandName": "Project"
+    },
+    "Manual Mode": {
+      "commandName": "Project",
+      "commandLineArgs": "manual"
+    }
+  }
+}
